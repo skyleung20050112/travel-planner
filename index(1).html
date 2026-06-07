@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>流浪指南 - 智慧旅行規劃助手 Pro v5.0 (零API穩定版)</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+  <!-- Leaflet Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ['Noto Sans TC', 'sans-serif'] } } }
+    }
+  </script>
+
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    body { -webkit-tap-highlight-color: transparent; }
+    .leaflet-popup-content-wrapper { border-radius: 16px !important; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important; padding: 4px !important; }
+    .leaflet-popup-tip { background: white !important; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans h-full antialiased overflow-hidden">
+
+  <div id="app" class="w-full max-w-md md:max-w-none mx-auto bg-white md:bg-slate-50 flex flex-col md:flex-row h-full md:shadow-none relative overflow-hidden">
+    
+    <!-- ================= 🖥️ 電腦版左側導覽欄 ================= -->
+    <aside class="hidden md:flex flex-col w-64 bg-slate-900 text-white shrink-0 p-5 justify-between relative shadow-2xl z-30">
+      <div class="space-y-6">
+        <div class="flex items-center space-x-3 pb-4 border-b border-slate-800">
+          <span class="text-3xl">🌍</span>
+          <div>
+            <h1 class="font-black text-sm tracking-wide text-white header-trip-title">載入中...</h1>
+            <p class="text-[10px] text-slate-400 font-medium header-trip-dates">請稍候</p>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50 flex items-center justify-between">
+          <span class="text-[10px] font-bold text-slate-300 flex items-center">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-ping" id="cloud-status-indicator-desktop"></span>
+            <span>同步狀態</span>
+          </span>
+          <span class="text-[9px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-bold">自動備份中</span>
+        </div>
+
+        <nav class="space-y-1">
+          <button onclick="switchTab('dashboard')" id="aside-dashboard" class="w-full flex items-center px-4 py-3 rounded-xl text-xs font-bold transition-all bg-blue-600 text-white">
+            <i class="fa-solid fa-house-chimney text-sm w-6 text-center"></i><span class="ml-2">總覽</span>
+          </button>
+          <button onclick="switchTab('itinerary')" id="aside-itinerary" class="w-full flex items-center px-4 py-3 rounded-xl text-xs font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-white">
+            <i class="fa-solid fa-calendar-day text-sm w-6 text-center"></i><span class="ml-2">行程</span>
+          </button>
+          <button onclick="switchTab('transport')" id="aside-transport" class="w-full flex items-center px-4 py-3 rounded-xl text-xs font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-white">
+            <i class="fa-solid fa-plane text-sm w-6 text-center"></i><span class="ml-2">交通</span>
+          </button>
+          <button onclick="switchTab('stay')" id="aside-stay" class="w-full flex items-center px-4 py-3 rounded-xl text-xs font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-white">
+            <i class="fa-solid fa-bed text-sm w-6 text-center"></i><span class="ml-2">住宿</span>
+          </button>
+          <button onclick="switchTab('spots')" id="aside-spots" class="w-full flex items-center px-4 py-3 rounded-xl text-xs font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-white">
+            <i class="fa-solid fa-heart text-sm w-6 text-center"></i><span class="ml-2">口袋名單</span>
+          </button>
+          <button onclick="switchTab('expenses')" id="aside-expenses" class="w-full flex items-center px-4 py-3 rounded-xl text-xs font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-white">
+            <i class="fa-solid fa-receipt text-sm w-6 text-center"></i><span class="ml-2">記帳</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="space-y-2 border-t border-slate-800 pt-4">
+        <button onclick="openSettingsModal()" class="w-full flex items-center px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition">
+          <i class="fa-solid fa-gear w-6 text-center"></i><span class="ml-2">偏好設定與雲端</span>
+        </button>
+        <button onclick="openBackupModal()" class="w-full flex items-center px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition">
+          <i class="fa-solid fa-cloud-arrow-up w-6 text-center"></i><span class="ml-2">備份與還原</span>
+        </button>
+        <button onclick="saveToDatabase(true)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-2 mt-2">
+          <i class="fa-solid fa-floppy-disk"></i><span>儲存行程</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ================= 右側主內容區 ================= -->
+    <div class="flex-1 flex flex-col h-full overflow-hidden">
+      
+      <!-- 📱 手機端頂部標題列 -->
+      <header class="md:hidden bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3.5 flex justify-between items-center shadow-md shrink-0 z-20">
+        <div class="flex items-center space-x-2">
+          <span class="text-2xl">🌍</span>
+          <div class="overflow-hidden">
+            <h1 class="font-bold text-base leading-tight header-trip-title truncate max-w-[150px]">載入中...</h1>
+            <p class="text-[10px] text-blue-100 font-medium header-trip-dates">請稍候</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-1">
+          <div id="presence-avatars-mobile" class="flex -space-x-1.5 mr-2 hidden"></div>
+          <span id="cloud-status-indicator" class="w-2 h-2 rounded-full bg-slate-400 mr-1.5 animate-pulse hidden"></span>
+          <button onclick="openSettingsModal()" class="p-2 hover:bg-white/10 rounded-full transition active:scale-95"><i class="fa-solid fa-gear text-sm"></i></button>
+        </div>
+      </header>
+
+      <!-- 🖥️ 電腦版頂部導覽列 -->
+      <header class="hidden md:flex bg-white border-b border-slate-200 h-16 px-8 items-center justify-between shrink-0 z-10">
+        <div class="flex items-center space-x-3">
+          <h2 class="text-lg font-black text-slate-800" id="desktop-section-title">總覽</h2>
+          <span class="text-slate-300">|</span>
+          <p class="text-xs font-semibold text-slate-400"><i class="fa-solid fa-location-dot mr-1 text-blue-500"></i><span id="desktop-dest-preview">載入中...</span></p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <div id="presence-avatars-desktop" class="flex -space-x-2 mr-3 hidden"></div>
+          <button onclick="openSettingsModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2">
+            <i class="fa-solid fa-gear"></i><span>偏好與雲端</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 no-scrollbar bg-slate-50">
+        
+        <div id="toast" class="fixed top-16 md:top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/95 text-white px-5 py-3 rounded-full text-xs shadow-2xl flex items-center space-x-2 transition-all duration-300 opacity-0 pointer-events-none z-[2500]">
+          <span id="toast-icon">✨</span><span id="toast-msg">已儲存</span>
+        </div>
+
+        <!-- ================= 1. 總覽面板 ================= -->
+        <div id="panel-dashboard" class="space-y-4 md:space-y-6">
+          <div id="collab-active-banner" class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex justify-between items-center shadow-sm hidden">
+            <div class="flex items-center space-x-3">
+              <span class="text-indigo-600 animate-pulse text-lg"><i class="fa-solid fa-people-arrows-left-right"></i></span>
+              <div>
+                <p class="text-xs font-bold text-indigo-900">雲端即時協同編輯中</p>
+                <p class="text-[10px] text-indigo-500 font-semibold">代碼：<span id="collab-banner-code" class="font-sans font-bold">------</span></p>
+              </div>
+            </div>
+            <button onclick="openSettingsModal()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl transition shadow-xs">管理房間</button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-start">
+            
+            <!-- 左欄：基本設定、天氣與倒數計時 -->
+            <div class="space-y-4 flex flex-col">
+              <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col">
+                <div class="flex justify-between items-start mb-3">
+                  <h3 class="font-extrabold text-slate-800 text-sm">基本設定</h3>
+                  <button onclick="openEditTripModal()" class="text-xs text-blue-600 font-bold hover:underline flex items-center space-x-1">
+                    <i class="fa-solid fa-pen-to-square"></i><span>編輯</span>
+                  </button>
+                </div>
+                <div class="space-y-3 flex-1 flex flex-col">
+                  <div class="flex items-center space-x-3 bg-slate-50 p-2.5 rounded-xl">
+                    <span class="text-xl">📍</span>
+                    <div>
+                      <p class="text-[9px] text-slate-400 font-bold">目的地</p>
+                      <p class="font-bold text-slate-700 text-xs" id="dash-destination">尚未設定</p>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="flex items-center space-x-2 bg-slate-50 p-2.5 rounded-xl">
+                      <span class="text-lg">📅</span>
+                      <div>
+                        <p class="text-[9px] text-slate-400 font-bold">出發日期</p>
+                        <p class="font-bold text-slate-700 text-[10px]" id="dash-start-date">-</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-slate-50 p-2.5 rounded-xl">
+                      <span class="text-lg">⏱️</span>
+                      <div>
+                        <p class="text-[9px] text-slate-400 font-bold">天數 & 貨幣</p>
+                        <p class="font-bold text-slate-700 text-[10px]" id="dash-duration">1 天 (TWD)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 🌦️ 天氣搜尋引擎 (移除 API) -->
+              <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex-none relative">
+                <div class="flex justify-between items-center mb-3">
+                  <h3 class="font-extrabold text-slate-800 text-sm">🌦️ 氣象與當地資訊搜尋</h3>
+                </div>
+                <div class="flex gap-2 mb-3">
+                  <div class="relative flex-1">
+                    <i class="fa-solid fa-location-dot absolute left-2 top-[8px] text-slate-400 text-xs"></i>
+                    <input type="text" id="weather-location-input" placeholder="輸入地點，例：新宿" class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-6 pr-2 py-1.5 text-xs focus:outline-none focus:border-blue-500 text-slate-700 font-bold">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button onclick="searchWebInfo('google_weather')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2.5 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 shadow-xs">
+                    <i class="fa-brands fa-google"></i> Google 天氣
+                  </button>
+                  <button onclick="searchWebInfo('yahoo_weather')" class="bg-purple-50 hover:bg-purple-100 text-purple-600 px-3 py-2.5 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 shadow-xs">
+                    <i class="fa-brands fa-yahoo"></i> Yahoo 氣象
+                  </button>
+                </div>
+              </div>
+
+              <!-- 倒數計時 -->
+              <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 text-white shadow-md relative overflow-hidden flex-none">
+                <div class="absolute -right-6 -bottom-6 text-white/10 text-8xl font-black select-none">TRIP</div>
+                <div class="relative z-10">
+                  <p class="text-xs text-blue-100 font-bold">距離出發還有</p>
+                  <div class="flex items-baseline space-x-1 my-1">
+                    <span class="text-4xl font-black font-sans" id="countdown-days">--</span>
+                    <span class="text-sm font-bold text-blue-100 ml-1">天</span>
+                  </div>
+                  <p class="text-[10px] text-blue-100/80" id="countdown-sub">祝您旅途愉快！</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 中欄：行李打包 -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col flex-1 h-full md:col-span-1 min-h-[300px]">
+              <div class="flex justify-between items-center mb-3">
+                <h3 class="font-extrabold text-slate-800 text-sm">🧳 <span>行李打包備忘錄</span></h3>
+                <span class="text-[10px] text-slate-400 font-bold" id="packing-count">0/0</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-1.5 mb-4">
+                <div id="packing-progress-bar" class="bg-blue-600 h-1.5 rounded-full transition-all duration-300"></div>
+              </div>
+              <div class="space-y-2 flex-1 overflow-y-auto no-scrollbar" id="packing-items-container"></div>
+              <div class="flex gap-2 mt-4 pt-3 border-t border-slate-100 shrink-0">
+                <input type="text" id="input-new-packing" placeholder="自訂物品..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500">
+                <button onclick="addPackingItem()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition">新增</button>
+              </div>
+            </div>
+
+            <!-- 右欄：常用網址 -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col flex-1 h-full min-h-[300px]">
+              <div class="flex justify-between items-center mb-3">
+                <h3 class="font-extrabold text-slate-800 text-sm">🔗 <span>常用網站速記</span></h3>
+                <span class="text-[10px] text-slate-400 font-bold" id="bookmarks-count">0 個</span>
+              </div>
+              <div class="space-y-2 flex-1 overflow-y-auto no-scrollbar" id="bookmarks-container"></div>
+              <div class="space-y-2 mt-4 pt-3 border-t border-slate-100 text-xs shrink-0">
+                <div class="grid grid-cols-2 gap-2">
+                  <input type="text" id="input-bookmark-title" placeholder="標題..." class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500">
+                  <input type="text" id="input-bookmark-url" placeholder="網址..." class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500">
+                </div>
+                <button onclick="addBookmarkItem()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl text-xs font-bold transition">加到常用連結</button>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center space-x-4">
+              <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 shrink-0"><i class="fa-solid fa-wallet text-xl"></i></div>
+              <div class="overflow-hidden">
+                <p class="text-[10px] text-slate-400 font-bold">總記帳花費</p>
+                <p class="font-black text-slate-800 text-base truncate" id="dash-total-expense">$0</p>
+              </div>
+            </div>
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center space-x-4">
+              <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shrink-0"><i class="fa-solid fa-map-pin text-xl"></i></div>
+              <div class="overflow-hidden">
+                <p class="text-[10px] text-slate-400 font-bold">收藏美食景點</p>
+                <p class="font-black text-slate-800 text-base truncate" id="dash-total-spots">0</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= 2. 行程規劃面板 ================= -->
+        <div id="panel-itinerary" class="space-y-4 hidden">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <h2 class="font-black text-base text-slate-800">📅 每日行程</h2>
+            <button onclick="openAddItineraryModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition"><i class="fa-solid fa-plus mr-1"></i><span>新增行程</span></button>
+          </div>
+          <div class="flex flex-col md:flex-row gap-6">
+            <div class="w-full md:w-48 shrink-0">
+              <div class="flex md:flex-col space-x-2 md:space-x-0 md:space-y-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar" id="day-selector"></div>
+            </div>
+            <div class="flex-1 space-y-3" id="itinerary-list"></div>
+          </div>
+        </div>
+
+        <!-- ================= 3. 航班與交通面板 ================= -->
+        <div id="panel-transport" class="space-y-4 hidden">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <h2 class="font-black text-base text-slate-800">✈️ 航班與交通</h2>
+            <button onclick="openAddTransportModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition"><i class="fa-solid fa-plus mr-1"></i><span>新增交通</span></button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="transport-list"></div>
+        </div>
+
+        <!-- ================= 住宿面板 ================= -->
+        <div id="panel-stay" class="space-y-4 hidden">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <h2 class="font-black text-base text-slate-800">🏨 飯店與民宿</h2>
+            <button onclick="openAddStayModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition"><i class="fa-solid fa-plus mr-1"></i><span>新增住宿</span></button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="stay-list"></div>
+        </div>
+
+        <!-- ================= 4. 口袋名單 ================= -->
+        <div id="panel-spots" class="space-y-4 hidden">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <h2 class="font-black text-base text-slate-800">🍜 口袋名單</h2>
+            <button onclick="openAddSpotModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition"><i class="fa-solid fa-plus mr-1"></i><span>新增景點</span></button>
+          </div>
+
+          <div class="flex flex-col md:flex-row gap-3 justify-between items-stretch md:items-center">
+            <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl shrink-0 md:w-64">
+              <button onclick="switchSpotsView('list')" id="btn-view-list" class="py-1.5 text-center text-xs font-bold rounded-lg bg-white text-slate-800 shadow-xs transition-all"><i class="fa-solid fa-list mr-1"></i><span>清單</span></button>
+              <button onclick="switchSpotsView('map')" id="btn-view-map" class="py-1.5 text-center text-xs font-medium rounded-lg text-slate-500 hover:text-slate-700 transition-all"><i class="fa-solid fa-map-location-dot mr-1"></i><span>地圖</span></button>
+            </div>
+            <div class="flex bg-slate-200/60 p-1 rounded-xl flex-1 max-w-md" id="spots-filter-bar">
+              <button onclick="filterSpots('all')" id="spot-filter-all" class="flex-1 py-1.5 text-center text-xs font-bold rounded-lg bg-white text-slate-800 shadow-xs transition">全部</button>
+              <button onclick="filterSpots('景點')" id="spot-filter-attraction" class="flex-1 py-1.5 text-center text-xs font-medium rounded-lg text-slate-600 transition">景點</button>
+              <button onclick="filterSpots('美食')" id="spot-filter-food" class="flex-1 py-1.5 text-center text-xs font-medium rounded-lg text-slate-600 transition">美食</button>
+              <button onclick="toggleDistanceSorting()" id="spot-filter-distance" class="flex-1 py-1.5 text-center text-xs font-medium rounded-lg text-indigo-600 border border-indigo-200/50 hover:bg-indigo-50 transition"><i class="fa-solid fa-arrows-up-down mr-1"></i>距離</button>
+            </div>
+          </div>
+
+          <div class="flex flex-col md:flex-row gap-6">
+            <div class="flex-1 space-y-2.5 max-h-[60vh] overflow-y-auto no-scrollbar" id="spots-list"></div>
+            
+            <div id="map-container" class="w-full md:w-1/2 h-[450px] md:h-[60vh] bg-slate-100 rounded-2xl overflow-hidden relative shadow-inner border border-slate-200 hidden z-10 shrink-0">
+              <div class="absolute top-3 left-3 right-3 bg-white/95 backdrop-blur-md p-2.5 rounded-xl shadow-lg z-20 flex items-center justify-between text-xs border border-slate-200/60">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-blue-600 animate-pulse"><i class="fa-solid fa-radar"></i></span><span class="font-bold text-slate-700">GPS 雷達</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                  <span class="text-[10px] text-slate-400 font-bold">半徑:</span>
+                  <select id="map-radar-radius" onchange="changeRadarRadius()" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] focus:outline-none font-bold text-slate-700">
+                    <option value="500">500 m</option>
+                    <option value="1000" selected>1 km</option>
+                    <option value="3000">3 km</option>
+                    <option value="5000">5 km</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 🗺️ 底圖使用 Google Maps -->
+              <div id="map" class="w-full h-full z-10"></div>
+              
+              <button onclick="trackUserGeolocation(true)" class="absolute bottom-[110px] right-3 z-[400] bg-white w-10 h-10 rounded-full shadow-lg text-blue-600 flex items-center justify-center hover:bg-blue-50 transition border border-slate-200" title="重新定位"><i class="fa-solid fa-crosshairs text-lg"></i></button>
+              
+              <div id="map-radar-results" class="absolute bottom-3 left-3 right-3 bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl shadow-lg z-20 text-[10px] border border-slate-200/60 max-h-24 overflow-y-auto no-scrollbar space-y-1">
+                <p class="font-bold text-slate-600 border-b border-slate-100 pb-1 flex justify-between">
+                  <span>🎯 範圍內結果</span><span class="text-blue-600" id="radar-count-tag">0 處</span>
+                </p>
+                <div id="radar-results-list" class="space-y-1 divide-y divide-slate-100"><p class="text-slate-400 text-center py-1">等待定位...</p></div>
+              </div>
+              <div id="map-loader" class="absolute inset-0 bg-slate-900/40 backdrop-blur-xs flex flex-col items-center justify-center text-white z-20 transition-opacity duration-300">
+                <i class="fa-solid fa-circle-notch animate-spin text-2xl mb-2"></i><p class="text-xs font-bold">定位中...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= 5. 記帳面板 ================= -->
+        <div id="panel-expenses" class="space-y-4 hidden">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <h2 class="font-black text-base text-slate-800">💰 記帳與預算</h2>
+            <button onclick="openAddExpenseModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition"><i class="fa-solid fa-plus mr-1"></i><span>記一筆</span></button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-6">
+              <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white shadow-md">
+                <div class="flex justify-between items-center mb-2">
+                  <p class="text-xs text-emerald-100"><span>預算使用狀況</span> (<span class="base-currency-label">TWD</span>)</p>
+                  <span class="text-[10px] bg-emerald-700/50 px-2.5 py-1 rounded-full animate-bounce font-bold" id="budget-ratio-text">0%</span>
+                </div>
+                <div class="flex justify-between items-baseline mb-4">
+                  <div><span class="text-xs opacity-75">已花費 </span><span class="text-3xl font-black font-sans" id="expense-total-spent">$0</span></div>
+                  <div class="text-right"><span class="text-xs opacity-75">總預算 </span><span class="text-lg font-extrabold font-sans" id="expense-total-budget">$0</span></div>
+                </div>
+                <div class="w-full bg-emerald-800/40 rounded-full h-2"><div id="budget-progress-bar" class="bg-white h-2 rounded-full transition-all duration-500" style="width: 0%"></div></div>
+              </div>
+
+              <!-- 外幣計算機 -->
+              <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+                <div class="flex justify-between items-center">
+                  <h3 class="font-bold text-slate-800 text-xs">📈 外幣匯率換算助手</h3>
+                  <span class="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">小工具</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                  <div>
+                    <label class="block text-[8px] text-slate-400 mb-0.5 font-bold">輸入金額</label>
+                    <input type="number" id="calc-foreign-amt" value="10000" oninput="quickCalculateRate()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-xs focus:outline-none font-bold text-slate-700">
+                  </div>
+                  <div>
+                    <label class="block text-[8px] text-slate-400 mb-0.5 font-bold">選擇外幣</label>
+                    <select id="calc-foreign-curr" onchange="quickCalculateRate()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-xs focus:outline-none font-bold text-slate-700">
+                      <option value="JPY" selected>JPY</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="HKD">HKD</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[8px] text-slate-400 mb-0.5 font-bold">自訂匯率</label>
+                    <input type="number" step="0.00001" id="calc-foreign-rate" value="0.218" oninput="quickCalculateRate()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-xs focus:outline-none font-bold text-slate-700">
+                  </div>
+                </div>
+                <div class="bg-emerald-50/50 p-2.5 rounded-xl flex items-center justify-between">
+                  <div class="text-xs">
+                    <span class="text-[9px] text-slate-400 font-bold block">轉換約</span>
+                    <span class="font-extrabold text-emerald-700 font-sans" id="calc-base-equivalent">2,180 TWD</span>
+                  </div>
+                  <button onclick="fillCalculatorToExpense()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-3 rounded-lg text-[10px] transition"><i class="fa-solid fa-file-invoice-dollar mr-1"></i>帶入</button>
+                </div>
+              </div>
+
+              <!-- 分帳模組 -->
+              <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-4">
+                <div class="flex justify-between items-center">
+                  <h3 class="font-extrabold text-slate-800 text-xs">👥 <span>成員與分帳</span></h3>
+                  <button onclick="toggleMemberManager()" class="text-xs text-blue-600 font-bold hover:underline"><i class="fa-solid fa-user-plus mr-1"></i><span>管理</span></button>
+                </div>
+                <div id="member-manager-box" class="bg-slate-50 p-3 rounded-xl space-y-2.5 hidden">
+                  <div class="flex gap-2">
+                    <input type="text" id="input-new-member" placeholder="成員名稱..." class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+                    <button onclick="addTripMember()" class="bg-blue-600 text-white px-4 py-1.5 rounded-xl text-xs font-bold">新增</button>
+                  </div>
+                  <div id="member-tags-list" class="flex flex-wrap gap-1.5"></div>
+                </div>
+                <div id="debt-resolution-panel" class="bg-slate-50 p-4 rounded-xl space-y-2.5">
+                  <h4 class="text-[10px] font-black text-slate-500"><i class="fa-solid fa-calculator mr-1 text-emerald-500"></i><span>最簡化清算：</span></h4>
+                  <div id="debt-settle-list" class="space-y-2 text-xs text-slate-700"></div>
+                </div>
+              </div>
+              <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+                <h3 class="font-extrabold text-slate-700 text-xs mb-3">消費分類比例</h3>
+                <div class="space-y-3" id="category-bars"></div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <h3 class="font-extrabold text-slate-700 text-xs">消費明細</h3>
+              <div class="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100 overflow-hidden" id="expense-items-list"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- 📱 手機底部導覽列 -->
+      <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 h-16 flex justify-around items-center z-40 shrink-0 shadow-lg px-1">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center justify-center flex-1 py-1 text-blue-600 font-semibold transition active:scale-90"><i class="fa-solid fa-house-chimney text-base mb-1 w-6 text-center"></i><span class="text-[8px]">總覽</span></button>
+        <button onclick="switchTab('itinerary')" id="nav-itinerary" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 font-normal transition active:scale-90"><i class="fa-solid fa-calendar-day text-base mb-1 w-6 text-center"></i><span class="text-[8px]">行程</span></button>
+        <button onclick="switchTab('transport')" id="nav-transport" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 font-normal transition active:scale-90"><i class="fa-solid fa-plane text-base mb-1 w-6 text-center"></i><span class="text-[8px]">交通</span></button>
+        <button onclick="switchTab('stay')" id="nav-stay" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 font-normal transition active:scale-90"><i class="fa-solid fa-bed text-base mb-1 w-6 text-center"></i><span class="text-[8px]">住宿</span></button>
+        <button onclick="switchTab('spots')" id="nav-spots" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 font-normal transition active:scale-90"><i class="fa-solid fa-heart text-base mb-1 w-6 text-center"></i><span class="text-[8px]">名單</span></button>
+        <button onclick="switchTab('expenses')" id="nav-expenses" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 font-normal transition active:scale-90"><i class="fa-solid fa-receipt text-base mb-1 w-6 text-center"></i><span class="text-[8px]">記帳</span></button>
+      </nav>
+    </div>
+
+    <!-- ================= 🔗 WebView Modal ================= -->
+    <div id="modal-link-viewer" class="fixed inset-0 bg-slate-900/85 backdrop-blur-xs flex flex-col justify-end z-[2500] transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-white w-full h-[90%] md:h-[95%] rounded-t-3xl flex flex-col shadow-2xl transform translate-y-full transition-transform duration-300 overflow-hidden md:max-w-4xl md:mx-auto">
+        <div class="bg-slate-100 px-5 py-3.5 border-b border-slate-200 flex justify-between items-center shrink-0">
+          <div class="flex items-center space-x-2 overflow-hidden mr-2">
+            <span class="text-slate-500 shrink-0"><i class="fa-solid fa-globe"></i></span>
+            <span id="link-viewer-title" class="font-bold text-slate-700 text-xs truncate">網頁載入中...</span>
+          </div>
+          <div class="flex items-center space-x-2 shrink-0">
+            <a id="btn-link-viewer-external" href="#" target="_blank" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-xl text-[10px] font-bold flex items-center space-x-1 transition active:scale-95"><i class="fa-solid fa-arrow-up-right-from-square"></i><span>外部瀏覽</span></a>
+            <button onclick="closeLinkViewer()" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark text-lg"></i></button>
+          </div>
+        </div>
+        <div class="flex-1 bg-slate-50 relative">
+          <iframe id="link-viewer-iframe" class="w-full h-full border-0" src=""></iframe>
+          <div class="absolute bottom-4 left-4 right-4 bg-amber-50 border border-amber-200 p-3 rounded-2xl text-[10px] text-amber-800 shadow-sm z-10 flex items-start space-x-2">
+            <span class="text-amber-500 text-sm shrink-0"><i class="fa-solid fa-circle-exclamation"></i></span>
+            <div>
+              <p class="font-bold">💡 預覽提示</p>
+              <p class="leading-relaxed mt-0.5">部分網站因安全協議不允許被嵌入。若顯示空白，可點擊右上角「外部瀏覽」讀取。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= ⚙️ 設定與雲端 Modal ================= -->
+    <div id="modal-settings" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-end md:items-center justify-center z-[2000] transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-5 space-y-4 shadow-2xl transform translate-y-full md:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] no-scrollbar">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="font-black text-slate-800 text-sm">⚙️ 系統偏好與雲端協同</h3>
+          <button onclick="closeModal('modal-settings')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-4 text-xs">
+          <!-- ⭐ 雲端設定提醒 -->
+          <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl text-[10px] text-amber-800 leading-relaxed">
+            <p class="font-bold"><i class="fa-solid fa-cloud"></i> 在 GitHub 部署與即時協同：</p>
+            <p class="mt-1">如果您將此程式下載到本地或 GitHub，請於原始碼底部填寫您自己的 <b>Firebase 專案金鑰</b> 才能開啟雲端協同功能。</p>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-2xl space-y-3 border border-slate-100">
+            <h4 class="font-extrabold text-slate-700 text-xs">🌐 系統設定</h4>
+            <div class="grid grid-cols-2 gap-2 mb-2">
+              <div>
+                <label class="block text-[9px] text-slate-400 mb-1">地區</label>
+                <select id="setting-region" class="w-full bg-white border border-slate-200 rounded-xl px-1.5 py-2 text-[10px] focus:outline-none font-semibold text-slate-700">
+                  <option value="TW">台灣 (TW)</option><option value="HK">香港 (HK)</option><option value="US">美國 (US)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[9px] text-slate-400 mb-1">本位貨幣</label>
+                <select id="setting-currency" onchange="changeBaseCurrency()" class="w-full bg-white border border-slate-200 rounded-xl px-1.5 py-2 text-[10px] focus:outline-none font-semibold text-slate-700">
+                  <option value="TWD">TWD</option><option value="HKD">HKD</option><option value="USD">USD</option><option value="JPY">JPY</option><option value="EUR">EUR</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 p-4 rounded-2xl space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-indigo-600 text-lg"><i class="fa-solid fa-people-group"></i></span>
+              <h4 class="font-extrabold text-indigo-900 text-xs">👥 雲端協同編輯</h4>
+            </div>
+            <p class="text-[10px] text-slate-500 leading-relaxed">點擊下方按鈕上傳雲端並建立共享房間。其他人只需輸入代碼便能即時同步！</p>
+            <div id="collab-status-panel" class="bg-white p-3 rounded-xl border border-indigo-100 space-y-2 hidden">
+              <div class="flex justify-between items-center text-[10px]">
+                <span class="text-slate-400">共享代碼</span>
+                <span class="text-emerald-600 font-bold flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-ping"></span><span>連線同步中</span></span>
+              </div>
+              <div class="flex items-center justify-between bg-indigo-50/50 p-2 rounded-lg">
+                <span id="collab-code-display" class="font-mono font-black text-lg text-indigo-700 tracking-wider">------</span>
+                <button onclick="copyCollabCode()" class="text-[10px] text-indigo-600 font-bold hover:underline"><i class="fa-solid fa-copy mr-0.5"></i><span>複製代碼</span></button>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <button id="btn-collab-create" onclick="createCollabRoom()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center space-x-1 shadow-sm"><i class="fa-solid fa-cloud-arrow-up text-xs"></i><span>建立新雲端協同房</span></button>
+              <div class="flex items-center gap-2">
+                <input type="text" id="collab-join-code-input" placeholder="輸入6位數代碼" class="w-1/2 bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs focus:outline-none font-bold uppercase tracking-widest text-center">
+                <button id="btn-collab-join" onclick="joinCollabRoom()" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition text-[11px]">加入現有協同</button>
+              </div>
+              <button id="btn-collab-disconnect" onclick="disconnectCollab()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-xl transition hidden text-[11px]">中斷雲端協同</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 🚫 Custom Dialog ================= -->
+    <div id="modal-custom-dialog" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[3000] transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-white w-80 rounded-2xl p-5 space-y-4 shadow-2xl transform scale-95 transition-transform duration-300">
+        <h4 class="font-extrabold text-slate-800 text-sm flex items-center space-x-1.5"><span class="text-amber-500"><i class="fa-solid fa-circle-question"></i></span><span>系統提示</span></h4>
+        <p id="dialog-msg" class="text-xs text-slate-600 leading-relaxed">確定執行此操作嗎？</p>
+        <div class="flex space-x-2">
+          <button id="dialog-cancel-btn" onclick="closeModal('modal-custom-dialog')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold py-2 rounded-xl text-xs transition">取消</button>
+          <button id="dialog-confirm-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm">確認</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 編輯旅程基本設定 Modal -->
+    <div id="modal-edit-trip" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-end md:items-center justify-center z-[2000] transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-5 space-y-4 shadow-2xl transform translate-y-full md:translate-y-0 transition-transform duration-300">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="font-black text-slate-800 text-sm">編輯設定</h3>
+          <button onclick="closeModal('modal-edit-trip')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">名稱</label><input type="text" id="input-trip-title" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"></div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">目的地</label><input type="text" id="input-trip-dest" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"></div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">出發日期</label><input type="date" id="input-trip-start" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-blue-500"></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">天數</label><input type="number" id="input-trip-duration" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-blue-500"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">貨幣</label>
+              <select id="input-trip-currency" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-blue-500"><option value="TWD">TWD</option><option value="HKD">HKD</option><option value="USD">USD</option><option value="JPY">JPY</option><option value="EUR">EUR</option></select>
+            </div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">預算限制</label><input type="number" id="input-trip-budget" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-blue-500"></div>
+          </div>
+        </div>
+        <button onclick="saveTripSettings()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition">儲存設定</button>
+      </div>
+    </div>
+
+    <!-- 行程 Modal -->
+    <div id="modal-add-itinerary" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-end md:items-center justify-center z-[2000] transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-5 space-y-4 shadow-2xl transform translate-y-full md:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] no-scrollbar">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="font-bold text-slate-800 text-sm" id="itinerary-modal-title">新增行程</h3>
+          <button onclick="closeModal('modal-add-itinerary')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">天數</label><select id="itinerary-day-select" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-blue-500"></select></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">時間</label><input type="time" id="itinerary-time" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-blue-500"></div>
+          </div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">活動名稱</label><input type="text" id="itinerary-title" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"></div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">備註說明</label><textarea id="itinerary-notes" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500 resize-none"></textarea></div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">參考連結 (URL)</label><input type="text" id="itinerary-link" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-blue-500"></div>
+        </div>
+        <button onclick="saveItineraryItem()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition" id="itinerary-modal-btn">加到行程</button>
+      </div>
+    </div>
+
+    <!-- 交通 Modal -->
+    <div id="modal-add-transport" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-end md:items-center justify-center z-[2000] transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-5 space-y-4 shadow-2xl transform translate-y-full md:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] no-scrollbar">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="font-bold text-slate-800 text-sm" id="transport-modal-title">新增交通</h3>
+          <button onclick="closeModal('modal-add-transport')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">類型</label>
+              <select id="transport-type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"><option value="✈️ 飛機">✈️ 飛機</option><option value="🚄 高鐵/火車">🚄 高鐵/火車</option><option value="🚌 巴士/客運">🚌 巴士</option><option value="🚗 自駕">🚗 自駕</option><option value="🚢 船隻">🚢 船隻</option></select>
+            </div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">班次</label><input type="text" id="transport-code" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">出發地</label><input type="text" id="transport-from" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">目的地</label><input type="text" id="transport-to" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">出發時間</label><input type="text" id="transport-dep-time" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">抵達時間</label><input type="text" id="transport-arr-time" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"></div>
+          </div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">網址 (URL)</label><input type="text" id="transport-link" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none"></div>
+        </div>
+        <button onclick="saveTransportItem()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition" id="transport-modal-btn">加到交通</button>
+      </div>
+    </div>
+
+    <!-- 住宿 Modal (優化版方塊) -->
+    <div id="modal-add-stay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-end md:items-center justify-center z-[2000] transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-5 space-y-4 shadow-2xl transform translate-y-full md:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] no-scrollbar">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="font-bold text-slate-800 text-sm" id="stay-modal-title">新增住宿</h3>
+          <button onclick="closeModal('modal-add-stay')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">名稱</label><input type="text" id="stay-name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">入住</label><input type="date" id="stay-checkin" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">退房</label><input type="date" id="stay-checkout" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">確認碼</label><input type="text" id="stay-code" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">電話</label><input type="text" id="stay-phone" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"></div>
+          </div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">地址</label><input type="text" id="stay-address" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none"></div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">備註</label><textarea id="stay-notes" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none resize-none"></textarea></div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">預訂網址 (URL)</label><input type="text" id="stay-link" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none"></div>
+        </div>
+        <button onclick="saveStayItem()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition" id="stay-modal-btn">存入住宿</button>
+      </div>
+    </div>
+
+    <!-- 景點 Modal (包含邊看邊記預覽) -->
+    <div id="modal-add-spot" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-end md:items-center justify-center z-[2000] transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-5 space-y-4 shadow-2xl transform translate-y-full md:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[85vh] no-scrollbar">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="font-bold text-slate-800 text-sm" id="spot-modal-title">新增景點</h3>
+          <button onclick="closeModal('modal-add-spot')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        
+        <!-- ✨ 即時預覽區塊 (免 API Key) -->
+        <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-2">
+          <label class="block text-[10px] font-bold text-indigo-800 mb-1.5"><i class="fa-solid fa-bolt mr-1"></i>社群/網頁連結即時預覽</label>
+          <div class="flex gap-2">
+            <input type="text" id="spot-ig-link" placeholder="貼上 IG、小紅書或地圖網址..." class="w-full bg-white border border-indigo-200 rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:border-indigo-400">
+            <button id="btn-preview-ig" onclick="previewSpotLink()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-2 rounded-lg text-[10px] shrink-0 transition">開啟預覽</button>
+          </div>
+          <p class="text-[9px] text-indigo-500 mt-1">開啟預覽視窗，方便您一邊看文章一邊記錄景點資訊。</p>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">種類</label>
+            <div class="flex gap-2">
+              <button onclick="selectSpotType('景點')" id="btn-spot-type-attraction" class="flex-1 py-2 rounded-xl text-xs font-bold bg-blue-50 border border-blue-200 text-blue-600">📍 景點</button>
+              <button onclick="selectSpotType('美食')" id="btn-spot-type-food" class="flex-1 py-2 rounded-xl text-xs font-bold bg-slate-50 border border-slate-200 text-slate-500">🍜 美食</button>
+            </div>
+          </div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">名稱</label><input type="text" id="spot-name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none"></div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">地址或座標</label>
+            <input type="text" id="spot-map" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none">
+            <p class="text-[10px] text-slate-400 mt-1"><i class="fa-solid fa-circle-info mr-1"></i>貼入 Google 地圖網址會自動擷取座標</p>
+          </div>
+        </div>
+        <button onclick="saveSpotItem()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition" id="spot-modal-btn">存入名單</button>
+      </div>
+    </div>
+
+    <!-- 記帳 Modal -->
+    <div id="modal-add-expense" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-end md:items-center justify-center z-[2000] transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-5 space-y-4 shadow-2xl transform translate-y-full md:translate-y-0 transition-transform duration-300 overflow-y-auto max-h-[90vh] no-scrollbar">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="font-bold text-slate-800 text-sm" id="expense-modal-title">新增記帳</h3>
+          <button onclick="closeModal('modal-add-expense')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">類別</label>
+            <select id="expense-category" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none"><option value="🍔 餐飲">🍔 餐飲</option><option value="🏨 住宿">🏨 住宿</option><option value="🎫 景點門票">🎫 景點門票</option><option value="🚇 交通">🚇 交通</option><option value="🛍️ 購物">🛍️ 購物</option><option value="💡 其他">💡 其他</option></select>
+          </div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">名稱</label><input type="text" id="expense-title" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none"></div>
+          
+          <div class="bg-slate-50 p-3 rounded-xl space-y-2 border border-slate-100">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-slate-700">💰 匯率</span>
+              <label class="flex items-center space-x-1 cursor-pointer"><input type="checkbox" id="expense-use-fx" onchange="toggleFxInputs()" class="rounded border-slate-300"><span class="text-[10px] text-slate-500 font-bold">外幣換算</span></label>
+            </div>
+            <div id="fx-normal-box"><label class="block text-[10px] text-slate-400 mb-1">金額</label><input type="number" id="expense-amount" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none font-bold"></div>
+            <div id="fx-active-box" class="grid grid-cols-3 gap-2 hidden">
+              <div><label class="block text-[10px] text-slate-400 mb-1">幣別</label><input type="text" id="expense-fx-currency" class="w-full bg-white border border-slate-200 rounded-xl px-2 py-2 text-xs focus:outline-none"></div>
+              <div><label class="block text-[10px] text-slate-400 mb-1">金額</label><input type="number" id="expense-fx-amount" oninput="calculateFxToBase()" class="w-full bg-white border border-slate-200 rounded-xl px-2 py-2 text-xs focus:outline-none"></div>
+              <div><label class="block text-[10px] text-slate-400 mb-1">匯率</label><input type="number" step="0.00001" id="expense-fx-rate" oninput="calculateFxToBase()" class="w-full bg-white border border-slate-200 rounded-xl px-2 py-2 text-xs focus:outline-none"></div>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 p-3 rounded-xl space-y-2 border border-slate-100">
+            <span class="font-bold text-slate-700 block">👥 多人拆帳</span>
+            <div class="grid grid-cols-2 gap-2">
+              <div><label class="block text-[10px] text-slate-400 mb-1">誰付款？</label><select id="expense-paid-by" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs focus:outline-none"></select></div>
+              <div><span class="block text-[10px] text-slate-400 mb-1">分攤者</span><div class="space-y-1.5 max-h-24 overflow-y-auto no-scrollbar bg-white p-2 rounded-xl border border-slate-200" id="expense-split-members-box"></div></div>
+            </div>
+          </div>
+        </div>
+        <button onclick="saveExpenseItem()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition" id="expense-modal-btn">儲存帳目</button>
+      </div>
+    </div>
+
+    <!-- 備份 Modal -->
+    <div id="modal-backup" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-end md:items-center justify-center z-[2000] transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-5 space-y-4 shadow-2xl transform translate-y-full md:translate-y-0 transition-transform duration-300">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="font-bold text-slate-800 text-sm">💾 備份與還原行程</h3>
+          <button onclick="closeModal('modal-backup')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-4 text-xs text-slate-600">
+          <p class="leading-relaxed bg-blue-50 text-blue-800 p-3 rounded-xl">網頁會自動將行程備份到您的 IndexedDB 安全儲存區，但建議您下載備份！</p>
+          <div class="space-y-2">
+            <h4 class="font-bold text-slate-700">1. 下載備份 (導出)</h4>
+            <button onclick="exportBackupData()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition active:scale-95 flex items-center justify-center space-x-1"><i class="fa-solid fa-download"></i><span>儲存 `.json`</span></button>
+          </div>
+          <div class="space-y-2 border-t border-slate-100 pt-3">
+            <h4 class="font-bold text-slate-700">2. 匯入備份 (還原)</h4>
+            <p class="text-[10px] text-red-500">⚠️ 注意：這將覆蓋所有行程！</p>
+            <div class="relative w-full">
+              <input type="file" id="backup-file-input" onchange="importBackupData(event)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10">
+              <div class="w-full border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl py-4 text-center cursor-pointer transition"><i class="fa-solid fa-file-import text-slate-400 text-lg mb-1"></i><p class="font-semibold text-slate-500 text-[10px]">點擊選擇檔案</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ================= DB 與環境設定 =================
+    const DB_NAME = "TravelPlannerProDB";
+    const DB_VERSION = 1;
+    const STORE_NAME = "trips";
+    let indexdb = null;
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'travel-planner-v5';
+    
+    // 若要部署到 GitHub，請替換為您的 Firebase Config
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { /* apiKey: "YOUR_API_KEY", projectId: "YOUR_PROJECT_ID" */ };
+
+    let app, db, auth;
+    let isCollabActive = false, collabTripId = null, unsubscribeCollab = null, isUpdatingFromCloud = false;
+
+    if (firebaseConfig.apiKey) {
+      try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        document.getElementById('cloud-status-indicator').classList.remove('hidden');
+      } catch (err) { console.warn("Firebase warning：", err); }
+    }
+
+    let isAuthInitialized = false;
+    async function ensureFirebaseAuth() {
+      if (!auth) throw new Error("環境未配置 Firebase 資料庫金鑰");
+      if (isAuthInitialized && auth.currentUser) return auth.currentUser;
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else { await signInAnonymously(auth); }
+        isAuthInitialized = true;
+        return auth.currentUser;
+      } catch (err) { throw err; }
+    }
+
+    // ================= 狀態與資料 =================
+    let currentTab = 'dashboard', currentDayIndex = 0, currentSpotTypeFilter = 'all', selectedSpotType = '景點', spotsViewMode = 'list', isDistanceSortingEnabled = false;
+    let editingItineraryIndex = null, editingTransportIndex = null, editingSpotId = null, editingExpenseId = null, editingStayIndex = null;
+    let mapInstance = null, markersLayerGroup = null, userLocationMarker = null, radarCircle = null, radarRadiusMeters = 1000, userCoordinates = null, mapRouteLine = null;
+    let weatherLocation = "";
+
+    let tripData = {
+      title: "我的精彩假期", destination: "日本 東京", startDate: new Date(Date.now() + 86400000 * 30).toISOString().split('T')[0], duration: 5, budget: 50000, baseCurrency: "TWD",
+      members: ["我", "阿華", "小明"], packingList: [{ id: 1, text: "護照與必備簽證", checked: true }], bookmarks: [{ id: 1, title: "東京地鐵乘車指南網", url: "https://www.tokyometro.jp/tcn/" }],
+      itinerary: [{ day: 1, time: "10:30", title: "抵達東京成田機場 領取 JR Pass", notes: "先在旅客中心辦理", link: "" }],
+      transport: [{ type: "✈️ 飛機", code: "BR198", from: "TPE (桃園)", to: "NRT (成田)", depTime: "08:30", arrTime: "12:45", link: "" }],
+      accommodations: [{ id: 1, name: "新宿歌舞伎町超級酒店", checkIn: "2026-10-01", checkOut: "2026-10-05", address: "東京都新宿區歌舞伎町", phone: "+81 3-1234-5678", code: "HTL-98127", notes: "櫃台24小時", link: "" }],
+      spots: [{ id: 1, name: "SHIBUYA SKY", type: "景點", mapUrl: "https://maps.google.com/?q=35.65858,139.7018", lat: 35.65858, lng: 139.7018, visited: false }, { id: 2, name: "敘敘苑燒肉", type: "美食", mapUrl: "https://maps.google.com/?q=35.6946,139.7022", lat: 35.6946, lng: 139.7022, visited: true }],
+      expenses: [{ id: 1, category: "🍔 餐飲", title: "燒肉雙人套餐", amount: 3500, fxCurrency: "JPY", fxAmount: 16000, fxRate: 0.21875, useFx: true, paidBy: "我", splitWith: ["我", "阿華"] }]
+    };
+
+    // ================= 全域 UI 工具 =================
+    window.showCustomConfirm = function(msg, onConfirm) {
+      document.getElementById('dialog-msg').textContent = msg;
+      document.getElementById('dialog-confirm-btn').onclick = () => { window.closeModal('modal-custom-dialog'); onConfirm(); };
+      window.openModal('modal-custom-dialog');
+    };
+    window.showCustomAlert = function(msg) {
+      document.getElementById('dialog-msg').textContent = msg;
+      document.getElementById('dialog-cancel-btn').classList.add('hidden');
+      document.getElementById('dialog-confirm-btn').onclick = () => { window.closeModal('modal-custom-dialog'); setTimeout(() => document.getElementById('dialog-cancel-btn').classList.remove('hidden'), 300); };
+      window.openModal('modal-custom-dialog');
+    };
+    let openModalsCount = 0;
+    window.openModal = function(id) {
+      openModalsCount++;
+      const modal = document.getElementById(id);
+      modal.classList.remove('opacity-0', 'pointer-events-none'); modal.classList.add('opacity-100');
+      modal.querySelector('div').classList.remove('translate-y-full', 'scale-95'); modal.querySelector('div').classList.add('translate-y-0', 'scale-100');
+    };
+    window.closeModal = function(id) {
+      openModalsCount = Math.max(0, openModalsCount - 1);
+      const modal = document.getElementById(id);
+      modal.querySelector('div').classList.remove('translate-y-0', 'scale-100'); modal.querySelector('div').classList.add('translate-y-full', 'scale-95');
+      setTimeout(() => { 
+        modal.classList.add('opacity-0', 'pointer-events-none'); modal.classList.remove('opacity-100');
+        if (openModalsCount === 0) window.refreshCurrentTab();
+      }, 300);
+    };
+    window.showToast = function(msg, icon="✨") {
+      document.getElementById('toast-icon').textContent = icon; document.getElementById('toast-msg').textContent = msg;
+      const t = document.getElementById('toast');
+      t.classList.remove('opacity-0', 'pointer-events-none'); t.classList.add('opacity-100');
+      setTimeout(() => { t.classList.remove('opacity-100'); t.classList.add('opacity-0', 'pointer-events-none'); }, 2500);
+    };
+
+    window.openLinkViewer = function(url, title="預覽") {
+      if(!url) return; let target = url.trim(); if(!target.startsWith('http')) target = 'https://' + target;
+      document.getElementById('link-viewer-title').textContent = title;
+      document.getElementById('link-viewer-iframe').src = target;
+      document.getElementById('btn-link-viewer-external').href = target;
+      window.openModal('modal-link-viewer');
+    };
+    window.closeLinkViewer = function() {
+      window.closeModal('modal-link-viewer');
+      setTimeout(() => { document.getElementById('link-viewer-iframe').src = ""; }, 300);
+    };
+
+    function calcDistance(lat1, lon1, lat2, lon2) {
+      if(!lat1||!lon1||!lat2||!lon2) return null;
+      const p1 = lat1*Math.PI/180, p2 = lat2*Math.PI/180, dp = (lat2-lat1)*Math.PI/180, dl = (lon2-lon1)*Math.PI/180;
+      const a = Math.sin(dp/2)*Math.sin(dp/2) + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
+      return 6371e3 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    }
+
+    // ================= 🔍 外部搜尋引擎 (無 AI 版) =================
+    window.searchWebInfo = function(engine) {
+      const locEl = document.getElementById('weather-location-input');
+      const query = locEl.value.trim() || tripData.destination || "東京";
+      let url = "";
+      if (engine === 'google_weather') {
+        url = `https://www.google.com/search?q=天氣+${encodeURIComponent(query)}`;
+      } else if (engine === 'yahoo_weather') {
+        url = `https://tw.news.yahoo.com/weather?q=${encodeURIComponent(query)}`;
+      }
+      window.open(url, '_blank');
+    };
+
+    // ================= 📱 IG / 景點邊看邊記預覽器 (無 AI 版) =================
+    window.previewSpotLink = function() {
+      const link = document.getElementById('spot-ig-link').value.trim();
+      if(!link) return window.showCustomAlert("請先貼上 IG、小紅書或地圖網址");
+      
+      window.openLinkViewer(link, "景點資料預覽");
+
+      // 智能 Regex 提取經緯度 (適用於 Google Maps 短網址或長網址)
+      const rx = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const mt = link.match(rx);
+      if(mt) {
+        document.getElementById('spot-map').value = `${mt[1]},${mt[2]}`;
+        window.showToast("已自動從網址擷取經緯度！", "📍");
+      }
+    };
+
+    // ================= 雲端協同機制 =================
+    let presenceInterval = null;
+    let knownActiveUsers = new Set();
+
+    window.createCollabRoom = async function() {
+      try {
+        window.showToast("連線中...", "⏳"); const user = await ensureFirebaseAuth();
+        const code = Math.random().toString(36).substring(2,8).toUpperCase();
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'trips', code), { 
+          tripId: code, tripData: JSON.parse(JSON.stringify(tripData)), hostUserId: user.uid, updatedAt: new Date().toISOString(),
+          presence: { [user.uid]: { name: tripData.members[0] || "旅客", time: Date.now() } }
+        });
+        collabTripId = code; isCollabActive = true; startCollabListener(code); updateCollabUIState(code); 
+        startPresenceHeartbeat(); window.showToast("協同模式啟動", "👥");
+      } catch(e) { window.showCustomAlert(e.message); }
+    };
+    
+    window.joinCollabRoom = async function() {
+      const code = document.getElementById('collab-join-code-input').value.trim().toUpperCase();
+      if(!code||code.length!==6) return window.showCustomAlert("請輸入正確 6 位數代碼");
+      try {
+        window.showToast("連線中...", "⏳"); await ensureFirebaseAuth();
+        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'trips', code));
+        if(snap.exists() && snap.data().tripData) {
+          tripData = snap.data().tripData; collabTripId = code; isCollabActive = true; window.saveToDatabase(false, true);
+          startCollabListener(code); updateCollabUIState(code); startPresenceHeartbeat();
+          window.switchTab('dashboard'); window.closeModal('modal-settings'); window.showToast("加入成功", "👥");
+        } else window.showToast("找不到代碼", "❌");
+      } catch(e) { window.showCustomAlert(e.message); }
+    };
+
+    function startCollabListener(code) {
+      if(unsubscribeCollab) unsubscribeCollab();
+      unsubscribeCollab = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'trips', code), snap => {
+        if(snap.exists()) {
+          const cloud = snap.data();
+          
+          if(cloud.tripData && !isUpdatingFromCloud) {
+            isUpdatingFromCloud = true;
+            const loaded = cloud.tripData;
+            if(!loaded.baseCurrency) loaded.baseCurrency="TWD"; if(!loaded.members) loaded.members=["我"]; if(!loaded.packingList) loaded.packingList=[]; if(!loaded.bookmarks) loaded.bookmarks=[]; if(!loaded.accommodations) loaded.accommodations=[];
+            tripData = loaded; 
+            window.saveToDatabase(false, true); 
+
+            if (openModalsCount === 0) window.refreshCurrentTab();
+            isUpdatingFromCloud = false;
+          }
+
+          if (cloud.presence) {
+            const now = Date.now();
+            const active = Object.entries(cloud.presence).filter(([uid, p]) => (now - p.time) < 45000).map(([uid, p]) => ({ uid, name: p.name }));
+            active.forEach(u => {
+                if (!knownActiveUsers.has(u.uid) && auth.currentUser && u.uid !== auth.currentUser.uid) {
+                    window.showToast(`👋 ${u.name} 正在檢視行程`, "👥");
+                    knownActiveUsers.add(u.uid);
+                }
+            });
+            const activeUids = new Set(active.map(u => u.uid));
+            knownActiveUsers.forEach(uid => { if (!activeUids.has(uid)) knownActiveUsers.delete(uid); });
+            window.renderPresenceAvatars(active);
+          }
+        }
+      });
+    }
+
+    let cloudSyncTimeout = null;
+    async function syncToCloud() {
+      if(!isCollabActive||!collabTripId||isUpdatingFromCloud) return;
+      if (cloudSyncTimeout) clearTimeout(cloudSyncTimeout);
+      
+      cloudSyncTimeout = setTimeout(async () => {
+        try { 
+          const user = await ensureFirebaseAuth(); 
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'trips', collabTripId), { 
+            tripData: JSON.parse(JSON.stringify(tripData)), lastUpdatedBy: user.uid, updatedAt: new Date().toISOString() 
+          }, { merge: true }); 
+        } catch(e){}
+      }, 1000);
+    }
+
+    function startPresenceHeartbeat() {
+      if (presenceInterval) clearInterval(presenceInterval);
+      presenceInterval = setInterval(async () => {
+        if (!isCollabActive || !collabTripId || !auth?.currentUser) return;
+        try {
+          const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', collabTripId);
+          const presenceUpdate = {};
+          presenceUpdate[`presence.${auth.currentUser.uid}`] = { name: tripData.members[0] || "旅客", time: Date.now() };
+          await updateDoc(userRef, presenceUpdate);
+        } catch(e) {}
+      }, 15000);
+    }
+
+    window.disconnectCollab = function() {
+      if(unsubscribeCollab) unsubscribeCollab(); unsubscribeCollab=null; isCollabActive=false; collabTripId=null;
+      if (presenceInterval) clearInterval(presenceInterval);
+      document.getElementById('collab-active-banner').classList.add('hidden'); document.getElementById('collab-status-panel').classList.add('hidden'); document.getElementById('btn-collab-create').classList.remove('hidden'); document.getElementById('btn-collab-disconnect').classList.add('hidden'); document.getElementById('cloud-status-indicator').classList.add('hidden'); document.getElementById('cloud-status-indicator-desktop').className="w-2 h-2 rounded-full bg-slate-500 mr-2"; 
+      window.renderPresenceAvatars([]);
+      window.showToast("中斷連線", "🔌");
+    };
+
+    function updateCollabUIState(c) {
+      document.getElementById('collab-active-banner').classList.remove('hidden'); document.getElementById('collab-banner-code').textContent=c; document.getElementById('collab-status-panel').classList.remove('hidden'); document.getElementById('collab-code-display').textContent=c; document.getElementById('btn-collab-create').classList.add('hidden'); document.getElementById('btn-collab-disconnect').classList.remove('hidden'); document.getElementById('cloud-status-indicator').className="w-2 h-2 rounded-full bg-emerald-500 mr-1 animate-pulse"; document.getElementById('cloud-status-indicator-desktop').className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse";
+    }
+    window.copyCollabCode = function() { const v = document.createElement("textarea"); document.body.appendChild(v); v.value = document.getElementById('collab-code-display').textContent; v.select(); document.execCommand("copy"); document.body.removeChild(v); window.showToast("已複製", "📋"); };
+
+    window.renderPresenceAvatars = function(activeUsers) {
+      const mContainer = document.getElementById('presence-avatars-mobile');
+      const dContainer = document.getElementById('presence-avatars-desktop');
+      if (!activeUsers || activeUsers.length <= 1) {
+          if(mContainer) mContainer.classList.add('hidden');
+          if(dContainer) dContainer.classList.add('hidden');
+          return;
+      }
+      if(mContainer) mContainer.classList.remove('hidden');
+      if(dContainer) dContainer.classList.remove('hidden');
+      
+      let html = ''; const colors = ['bg-rose-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500'];
+      activeUsers.forEach((u, i) => {
+          const initial = u.name.charAt(0).toUpperCase(); const color = colors[i % colors.length];
+          html += `<div class="w-6 h-6 rounded-full border-2 border-white ${color} text-white flex items-center justify-center text-[10px] font-bold shadow-sm" title="${u.name}">${initial}</div>`;
+      });
+      if(mContainer) mContainer.innerHTML = html; if(dContainer) dContainer.innerHTML = html;
+    };
+
+    // ================= 景點互聯 =================
+    window.addSpotToItinerary = function(id) {
+      const s = tripData.spots.find(x=>x.id===id); if(!s) return;
+      window.openAddItineraryModal(); document.getElementById('itinerary-title').value = s.name; document.getElementById('itinerary-link').value = s.mapUrl||''; document.getElementById('itinerary-notes').value = `標籤: ${s.type}\n地址: ${s.address||''}`; window.showToast(`已帶入「${s.name}」`, "📝");
+    };
+
+    window.renderSpots = function() {
+      const c = document.getElementById('spots-list'); c.innerHTML='';
+      let f = [...tripData.spots]; if(currentSpotTypeFilter!=='all') f = f.filter(x=>x.type===currentSpotTypeFilter);
+      f = f.map(s => { s.distance = (userCoordinates&&s.lat&&s.lng) ? calcDistance(userCoordinates.lat, userCoordinates.lng, s.lat, s.lng) : null; return s; });
+      if(isDistanceSortingEnabled&&userCoordinates) f.sort((a,b)=> (a.distance===null?1:b.distance===null?-1:a.distance-b.distance));
+      if(f.length===0){ c.innerHTML=`<div class="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200"><span class="text-3xl block mb-2">🍜</span><p class="text-slate-400 text-xs font-medium">尚無名單</p></div>`; return; }
+      f.forEach(s => {
+        const rawIdx = tripData.spots.findIndex(x=>x.id===s.id);
+        const e = document.createElement('div'); e.className=`bg-white p-3 rounded-2xl border ${s.visited?'opacity-60':''} shadow-xs flex justify-between items-center transition-all duration-300`;
+        let db = s.distance!==null ? `<span class="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0"><i class="fa-solid fa-location-arrow"></i>距離 ${s.distance<1000?Math.round(s.distance)+'m':(s.distance/1000).toFixed(1)+'km'}</span>` : '';
+        e.innerHTML = `
+          <div class="flex items-center space-x-3 overflow-hidden mr-2">
+            <button onclick="toggleSpotVisited(${rawIdx})" class="w-5 h-5 rounded-md border flex items-center justify-center transition shrink-0 ${s.visited?'bg-emerald-500 border-emerald-500 text-white':'border-slate-300'}">${s.visited?'<i class="fa-solid fa-check text-[10px]"></i>':''}</button>
+            <div class="overflow-hidden"><div class="flex items-center space-x-1.5"><span class="text-xs shrink-0">${s.type==='美食'?'🍔':'📍'}</span><span class="font-bold text-slate-800 text-xs truncate ${s.visited?'line-through text-slate-400':''}">${s.name}</span></div><div class="flex flex-wrap items-center gap-1.5 mt-1"><span class="text-[9px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-500">${s.type}</span>${s.lat&&s.lng&&!db?'<span class="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-semibold"><i class="fa-solid fa-earth-asia mr-0.5"></i>已標記</span>':''}${db}</div></div>
+          </div>
+          <div class="flex items-center space-x-1 shrink-0">
+            <button onclick="addSpotToItinerary(${s.id})" class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg" title="快速加入行程"><i class="fa-solid fa-calendar-plus"></i></button>
+            ${s.lat?`<a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}" target="_blank" class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg" title="導航"><i class="fa-solid fa-diamond-turn-right"></i></a>`:''}
+            <button onclick="openEditSpotModal(${s.id})" class="p-2 text-slate-300 hover:text-blue-500"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button onclick="deleteSpotItem(${rawIdx})" class="p-2 text-slate-300 hover:text-red-500"><i class="fa-solid fa-trash-can"></i></button>
+          </div>`;
+        c.appendChild(e);
+      });
+    };
+
+    window.toggleDistanceSorting = function() {
+      if(!userCoordinates) return window.showCustomAlert("無法取得位置，請先點擊地圖定位按鈕！");
+      isDistanceSortingEnabled = !isDistanceSortingEnabled;
+      const b = document.getElementById('spot-filter-distance');
+      b.className = isDistanceSortingEnabled ? "flex-1 py-1.5 text-center text-xs font-bold rounded-lg bg-indigo-600 text-white shadow-sm transition flex items-center justify-center gap-1" : "flex-1 py-1.5 text-center text-xs font-medium rounded-lg text-indigo-600 border border-indigo-200/50 hover:bg-indigo-50 transition flex items-center justify-center gap-1";
+      window.renderSpots();
+    };
+
+    window.filterSpots = function(t) { currentSpotTypeFilter=t; window.renderSpots(); };
+    window.switchSpotsView = function(m) {
+      spotsViewMode=m; const cl = document.getElementById('spots-list'), mp = document.getElementById('map-container');
+      const bl = document.getElementById('btn-view-list'), bm = document.getElementById('btn-view-map');
+      if(m==='list') { 
+        bl.className="py-1.5 text-center text-xs font-bold rounded-lg bg-white text-slate-800 shadow-xs transition-all"; bm.className="py-1.5 text-center text-xs font-medium rounded-lg text-slate-500 hover:text-slate-700 transition-all";
+        cl.classList.remove('hidden'); mp.classList.add('hidden'); window.renderSpots(); 
+      } else { 
+        bm.className="py-1.5 text-center text-xs font-bold rounded-lg bg-white text-slate-800 shadow-xs transition-all"; bl.className="py-1.5 text-center text-xs font-medium rounded-lg text-slate-500 hover:text-slate-700 transition-all";
+        if(window.innerWidth>=768) cl.classList.remove('hidden'); else cl.classList.add('hidden'); mp.classList.remove('hidden'); setTimeout(setupLeafletMap, 150); 
+      }
+    };
+
+    function setupLeafletMap() {
+      if(!mapInstance) {
+        mapInstance = L.map('map',{zoomControl:true,attributionControl:false}).setView([35.658, 139.701], 13);
+        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {maxZoom:20}).addTo(mapInstance); // Google Maps
+        markersLayerGroup = L.layerGroup().addTo(mapInstance);
+      }
+      mapInstance.invalidateSize(); drawMapMarkers(); window.trackUserGeolocation();
+    }
+
+    window.changeRadarRadius = function() {
+      radarRadiusMeters = parseInt(document.getElementById('map-radar-radius').value)||1000;
+      if(radarCircle&&userCoordinates){ radarCircle.setRadius(radarRadiusMeters); mapInstance.fitBounds(radarCircle.getBounds()); updateRadarResults(); }
+    };
+
+    function updateRadarResults() {
+      const el = document.getElementById('radar-results-list'), c = document.getElementById('radar-count-tag');
+      if(!userCoordinates) { el.innerHTML=`<p class="text-slate-400 text-center py-1">未定位</p>`; return; }
+      let res = []; tripData.spots.forEach(s=>{ if(s.lat) { let d=calcDistance(userCoordinates.lat,userCoordinates.lng,s.lat,s.lng); if(d<=radarRadiusMeters) res.push({...s,dist:d}); } });
+      res.sort((a,b)=>a.dist-b.dist); c.textContent = `偵測 ${res.length} 處`;
+      if(res.length===0){ el.innerHTML=`<p class="text-slate-400 text-center py-1">無結果</p>`; return; }
+      el.innerHTML='';
+      res.forEach(s=>{
+        const r = document.createElement('div'); r.className="flex items-center justify-between py-1 text-[10px]";
+        r.innerHTML=`<div class="flex items-center space-x-1.5 truncate mr-2"><span>${s.type==='美食'?'🍔':'📍'}</span><span class="font-bold truncate">${s.name}</span></div><div class="flex items-center space-x-2 shrink-0"><span class="font-extrabold text-indigo-600">${s.dist<1000?Math.round(s.dist)+'m':(s.dist/1000).toFixed(1)+'km'}</span><a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}" target="_blank" class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200/50">導航</a></div>`;
+        el.appendChild(r);
+      });
+    }
+
+    // ⭐ 重大優化：加入了 IP API Fallback 防護
+    window.trackUserGeolocation = function(force=false) {
+      const Ld = document.getElementById('map-loader'); Ld.classList.remove('hidden'); Ld.style.opacity='1';
+      
+      const successCb = (lat, lng, source) => {
+        userCoordinates = {lat, lng}; mapInstance.setView([lat, lng], 14);
+        if(userLocationMarker) mapInstance.removeLayer(userLocationMarker);
+        userLocationMarker = L.marker([lat, lng], {icon: L.divIcon({html:`<div class="relative flex h-6 w-6"><span class="animate-ping absolute h-full w-full rounded-full bg-blue-400 opacity-75"></span><span class="relative flex rounded-full h-6 w-6 bg-blue-600 border-2 border-white items-center justify-center text-[10px] text-white font-bold">Me</span></div>`, className:'', iconSize:[24,24], iconAnchor:[12,12]})}).addTo(mapInstance);
+        if(radarCircle) mapInstance.removeLayer(radarCircle);
+        radarCircle = L.circle([lat, lng], {radius:radarRadiusMeters, fillColor:'#3b82f6', fillOpacity:0.12, color:'#3b82f6', weight:1, dashArray:"3,5"}).addTo(mapInstance);
+        mapInstance.fitBounds(radarCircle.getBounds()); updateRadarResults();
+        Ld.style.opacity='0'; setTimeout(()=>Ld.classList.add('hidden'),300); 
+        if(force) window.showToast(`📍 定位成功 (${source})`); 
+        if(isDistanceSortingEnabled) window.renderSpots();
+      };
+
+      const errorCb = async () => {
+        try {
+          const res = await fetch('https://ipapi.co/json/');
+          const data = await res.json();
+          if(data.latitude && data.longitude) {
+             successCb(data.latitude, data.longitude, "IP 估算");
+          } else { throw new Error(); }
+        } catch(e) {
+          Ld.classList.add('hidden');
+          if(force) window.showCustomAlert("瀏覽器拒絕 GPS，且 IP 定位也失敗了。");
+        }
+      };
+
+      if(navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => successCb(pos.coords.latitude, pos.coords.longitude, "GPS"),
+          errorCb,
+          {enableHighAccuracy:true, timeout:4000}
+        );
+      } else {
+        errorCb();
+      }
+    };
+
+    function drawMapMarkers() {
+      if(!mapInstance) return; markersLayerGroup.clearLayers();
+      tripData.spots.forEach(s=>{
+        if(!s.lat) return;
+        const mk = L.marker([s.lat, s.lng], {icon: L.divIcon({html:`<div class="flex items-center justify-center w-8 h-8 rounded-full bg-white shadow-md border-2 ${s.visited?'border-emerald-400':'border-blue-400'} text-lg">${s.type==='美食'?'🍔':'📍'}</div>`, className:'', iconSize:[32,32], iconAnchor:[16,16]})}).addTo(markersLayerGroup);
+        mk.bindPopup(`<div class="p-1 font-sans text-xs"><h4 class="font-extrabold text-sm mb-2">${s.name}</h4><div class="flex space-x-1"><button onclick="addSpotToItinerary(${s.id})" class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded">加入行程</button><button onclick="changeVisitedOnMap(${s.id})" class="bg-slate-100 px-2 py-1 rounded">打卡</button></div></div>`);
+      });
+      if(mapRouteLine) mapInstance.removeLayer(mapRouteLine);
+      const dayEvts = tripData.itinerary.filter(i=>i.day===(currentDayIndex+1)).sort((a,b)=>a.time.localeCompare(b.time));
+      const pts = []; dayEvts.forEach(e=>{ const s=tripData.spots.find(x=>x.lat&&x.name.includes(e.title)); if(s) pts.push([s.lat,s.lng]); });
+      if(pts.length>=2) mapRouteLine = L.polyline(pts,{color:'#6366f1',weight:4,dashArray:'5,10'}).addTo(mapInstance);
+    }
+    window.changeVisitedOnMap = function(id) { const i=tripData.spots.findIndex(x=>x.id===id); if(i!==-1) { tripData.spots[i].visited=!tripData.spots[i].visited; window.saveToDatabase(); drawMapMarkers(); } };
+
+    // ================= 視圖與資料渲染 =================
+    window.refreshCurrentTab = function() {
+      if(currentTab==='itinerary'){ window.renderDaySelector(); window.renderItinerary(); } 
+      else if(currentTab==='transport') window.renderTransport(); 
+      else if(currentTab==='stay') window.renderStay(); 
+      else if(currentTab==='spots') window.renderSpots(); 
+      else if(currentTab==='expenses') window.renderExpenses(); 
+      else if(currentTab==='dashboard') window.updateDashboardInfo();
+    };
+
+    window.switchTab = function(t) {
+      currentTab = t; ['dashboard','itinerary','transport','stay','spots','expenses'].forEach(x=>{
+        document.getElementById('panel-'+x).classList.add('hidden');
+        const mNav = document.getElementById('nav-'+x), aNav = document.getElementById('aside-'+x);
+        if(mNav) mNav.className = (x===t) ? "flex flex-col items-center flex-1 py-1 text-blue-600 font-bold" : "flex flex-col items-center flex-1 py-1 text-slate-400 font-normal";
+        if(aNav) aNav.className = (x===t) ? "w-full flex items-center px-4 py-3 rounded-xl text-xs font-bold bg-blue-600 text-white" : "w-full flex items-center px-4 py-3 rounded-xl text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white";
+      });
+      document.getElementById('panel-'+t).classList.remove('hidden');
+      window.refreshCurrentTab();
+    };
+
+    window.updateDashboardInfo = function() {
+      document.querySelectorAll('.header-trip-title').forEach(e=>e.textContent=tripData.title);
+      document.querySelectorAll('.base-currency-label').forEach(e=>e.textContent=tripData.baseCurrency);
+      if(tripData.startDate) {
+        const sd = new Date(tripData.startDate), ed = new Date(sd.getTime()+(tripData.duration-1)*86400000);
+        document.querySelectorAll('.header-trip-dates').forEach(e=>e.textContent=`${sd.getFullYear()}/${sd.getMonth()+1}/${sd.getDate()} - ${ed.getFullYear()}/${ed.getMonth()+1}/${ed.getDate()} (${tripData.duration}天)`);
+        document.getElementById('dash-start-date').textContent = tripData.startDate;
+        let d = Math.ceil((new Date(tripData.startDate).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000);
+        document.getElementById('countdown-days').textContent = d>0?d:d===0?"0":"✔";
+      }
+      document.getElementById('dash-destination').textContent = tripData.destination; document.getElementById('dash-duration').textContent = `${tripData.duration}天`;
+      document.getElementById('dash-total-expense').textContent = `$${tripData.expenses.reduce((s,i)=>s+i.amount,0).toLocaleString()}`; document.getElementById('dash-total-spots').textContent = tripData.spots.length;
+      
+      const inEl = document.getElementById('weather-location-input');
+      if(!weatherLocation) weatherLocation = tripData.destination;
+      if(inEl && !inEl.value) inEl.value = weatherLocation;
+      
+      window.renderPackingList(); window.renderBookmarks();
+    };
+
+    window.renderPackingList = function() {
+      const c = document.getElementById('packing-items-container'); c.innerHTML='';
+      let cc = 0; tripData.packingList.forEach((p,i)=>{ if(p.checked) cc++; c.innerHTML+=`<div class="flex justify-between items-center text-xs py-1"><label class="flex flex-1 items-center space-x-2"><input type="checkbox" onchange="togglePackingItem(${i})" ${p.checked?'checked':''} class="rounded text-blue-600"><span class="${p.checked?'line-through text-slate-400':''}">${p.text}</span></label><button onclick="deletePackingItem(${i})" class="text-red-400"><i class="fa-solid fa-xmark"></i></button></div>`; });
+      document.getElementById('packing-count').textContent = `${cc}/${tripData.packingList.length}`;
+      document.getElementById('packing-progress-bar').style.width = tripData.packingList.length?`${(cc/tripData.packingList.length)*100}%`:"0%";
+    };
+    window.addPackingItem = function() { const v=document.getElementById('input-new-packing').value.trim(); if(v){ tripData.packingList.push({id:Date.now(),text:v,checked:false}); document.getElementById('input-new-packing').value=''; window.saveToDatabase(); window.renderPackingList(); } };
+    window.togglePackingItem = function(i) { tripData.packingList[i].checked = !tripData.packingList[i].checked; window.saveToDatabase(); window.renderPackingList(); };
+    window.deletePackingItem = function(i) { tripData.packingList.splice(i,1); window.saveToDatabase(); window.renderPackingList(); };
+
+    window.renderBookmarks = function() {
+      const c = document.getElementById('bookmarks-container'); c.innerHTML='';
+      document.getElementById('bookmarks-count').textContent = tripData.bookmarks.length + ' 個';
+      tripData.bookmarks.forEach((b,i)=> c.innerHTML+=`<div class="flex justify-between items-center text-xs py-1.5 border-b border-slate-100"><button onclick="openLinkViewer('${b.url}','${b.title}')" class="font-bold truncate text-left text-blue-600">${b.title}</button><div><a href="${b.url}" target="_blank" class="text-slate-400 mx-2"><i class="fa-solid fa-arrow-up-right-from-square"></i></a><button onclick="deleteBookmarkItem(${i})" class="text-red-400"><i class="fa-solid fa-trash"></i></button></div></div>`);
+    };
+    window.addBookmarkItem = function() {
+      const t=document.getElementById('input-bookmark-title').value, u=document.getElementById('input-bookmark-url').value;
+      if(t&&u){ tripData.bookmarks.push({id:Date.now(),title:t,url:u}); document.getElementById('input-bookmark-title').value=''; document.getElementById('input-bookmark-url').value=''; window.saveToDatabase(); window.renderBookmarks(); }
+    };
+    window.deleteBookmarkItem = function(i) { tripData.bookmarks.splice(i,1); window.saveToDatabase(); window.renderBookmarks(); };
+
+    window.openEditTripModal = function() {
+      document.getElementById('input-trip-title').value = tripData.title; document.getElementById('input-trip-dest').value = tripData.destination; document.getElementById('input-trip-start').value = tripData.startDate; document.getElementById('input-trip-duration').value = tripData.duration; document.getElementById('input-trip-currency').value = tripData.baseCurrency; document.getElementById('input-trip-budget').value = tripData.budget; window.openModal('modal-edit-trip');
+    };
+    window.saveTripSettings = function() {
+      tripData.title=document.getElementById('input-trip-title').value||""; tripData.destination=document.getElementById('input-trip-dest').value; tripData.startDate=document.getElementById('input-trip-start').value; tripData.duration=parseInt(document.getElementById('input-trip-duration').value)||1; tripData.baseCurrency=document.getElementById('input-trip-currency').value; tripData.budget=parseInt(document.getElementById('input-trip-budget').value)||0; window.saveToDatabase(); window.updateDashboardInfo(); window.closeModal('modal-edit-trip'); window.showToast("已更新設定");
+    };
+    window.changeBaseCurrency = function() { tripData.baseCurrency = document.getElementById('setting-currency').value; window.saveToDatabase(); window.updateDashboardInfo(); if(currentTab==='expenses') window.renderExpenses(); window.showToast("貨幣已切換"); };
+    window.openSettingsModal = function() { document.getElementById('setting-currency').value = tripData.baseCurrency; document.getElementById('setting-gemini-key').value = userGeminiKey; window.openModal('modal-settings'); };
+    window.openBackupModal = function() { window.openModal('modal-backup'); };
+
+    window.renderDaySelector = function() {
+      const c = document.getElementById('day-selector'); c.innerHTML='';
+      for(let i=1;i<=tripData.duration;i++) {
+        const b = document.createElement('button'); b.onclick=()=>{currentDayIndex=i-1; window.renderDaySelector(); window.renderItinerary();};
+        b.className = (i-1===currentDayIndex) ? "px-4 py-3 bg-blue-600 text-white rounded-xl text-xs font-bold w-full text-left" : "px-4 py-3 bg-white text-slate-500 rounded-xl border text-xs w-full text-left"; b.textContent = `第 ${i} 天`; c.appendChild(b);
+      }
+    };
+    window.renderItinerary = function() {
+      const c = document.getElementById('itinerary-list'); c.innerHTML='';
+      const evts = tripData.itinerary.filter(i=>i.day===(currentDayIndex+1)).sort((a,b)=>a.time.localeCompare(b.time));
+      evts.forEach(e=>{ const ri = tripData.itinerary.indexOf(e); c.innerHTML+=`<div class="bg-white p-4 rounded-xl border flex justify-between"><div class="flex"><span class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs font-bold mr-3 h-fit">${e.time}</span><div><h4 class="font-bold text-sm">${e.title}</h4><p class="text-xs text-slate-400 mt-1">${e.notes}</p></div></div><div><button onclick="openEditItineraryModal(${ri})" class="p-2 text-blue-400"><i class="fa-solid fa-pen"></i></button><button onclick="deleteItineraryItem(${ri})" class="p-2 text-red-400"><i class="fa-solid fa-trash"></i></button></div></div>`; });
+    };
+    window.openAddItineraryModal = function() {
+      editingItineraryIndex=null; const s=document.getElementById('itinerary-day-select'); s.innerHTML='';
+      for(let i=1;i<=tripData.duration;i++){ const o=document.createElement('option'); o.value=i; o.textContent=`第 ${i} 天`; if(i===currentDayIndex+1) o.selected=true; s.appendChild(o); }
+      document.getElementById('itinerary-time').value="09:00"; document.getElementById('itinerary-title').value=""; document.getElementById('itinerary-notes').value=""; window.openModal('modal-add-itinerary');
+    };
+    window.openEditItineraryModal = function(i) {
+      editingItineraryIndex=i; const e = tripData.itinerary[i]; const s=document.getElementById('itinerary-day-select'); s.innerHTML='';
+      for(let j=1;j<=tripData.duration;j++){ const o=document.createElement('option'); o.value=j; o.textContent=`第 ${j} 天`; if(j===e.day) o.selected=true; s.appendChild(o); }
+      document.getElementById('itinerary-time').value=e.time; document.getElementById('itinerary-title').value=e.title; document.getElementById('itinerary-notes').value=e.notes||''; document.getElementById('itinerary-link').value=e.link||''; window.openModal('modal-add-itinerary');
+    };
+    window.saveItineraryItem = function() {
+      const p = {day:parseInt(document.getElementById('itinerary-day-select').value), time:document.getElementById('itinerary-time').value, title:document.getElementById('itinerary-title').value, notes:document.getElementById('itinerary-notes').value, link:document.getElementById('itinerary-link').value};
+      if(!p.title) return window.showCustomAlert("需輸入名稱");
+      if(editingItineraryIndex!==null) tripData.itinerary[editingItineraryIndex]=p; else tripData.itinerary.push(p);
+      window.saveToDatabase(); currentDayIndex=p.day-1; window.renderDaySelector(); window.renderItinerary(); window.closeModal('modal-add-itinerary');
+    };
+    window.deleteItineraryItem = function(i) { window.showCustomConfirm("刪除？", ()=>{ tripData.itinerary.splice(i,1); window.saveToDatabase(); window.renderItinerary(); }); };
+
+    window.renderTransport = function() {
+      const c = document.getElementById('transport-list'); c.innerHTML='';
+      if(tripData.transport.length===0){ c.innerHTML=`<div class="col-span-1 md:col-span-2 text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200"><span class="text-3xl block mb-2">🚄</span><p class="text-slate-400 text-xs font-medium">還沒有航班或交通紀錄</p></div>`; return;}
+      tripData.transport.forEach((t,i)=> c.innerHTML+=`<div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden relative"><div class="bg-slate-800 text-white px-4 py-2.5 flex justify-between items-center"><span class="text-xs font-bold">${t.type}</span><div class="flex items-center space-x-2"><span class="text-[10px] bg-white/20 px-2 py-0.5 rounded font-sans">${t.code}</span><button onclick="openEditTransportModal(${i})" class="text-slate-400 hover:text-blue-400 p-1"><i class="fa-solid fa-pen text-[10px]"></i></button><button onclick="deleteTransportItem(${i})" class="text-slate-400 hover:text-red-400 p-1"><i class="fa-solid fa-trash text-[10px]"></i></button></div></div><div class="p-4 flex justify-between items-center bg-radial from-white to-slate-50 relative"><div class="absolute w-4 h-4 bg-slate-50 border-r border-slate-200 rounded-full -left-2 top-1/2 -translate-y-1/2"></div><div class="absolute w-4 h-4 bg-slate-50 border-l border-slate-200 rounded-full -right-2 top-1/2 -translate-y-1/2"></div><div class="text-left"><p class="text-[9px] text-slate-400 font-bold uppercase">出發地</p><h4 class="text-base font-black text-slate-700">${t.from}</h4><p class="text-xs font-bold text-slate-500 mt-1">${t.depTime}</p></div><div class="flex-1 flex flex-col items-center justify-center px-4"><span class="text-xs text-slate-300 tracking-widest">━━━━</span><i class="fa-solid fa-plane text-slate-300 text-xs my-0.5 transform rotate-45"></i><span class="text-[9px] text-slate-400">搭乘</span></div><div class="text-right"><p class="text-[9px] text-slate-400 font-bold uppercase">目的地</p><h4 class="text-base font-black text-slate-700">${t.to}</h4><p class="text-xs font-bold text-slate-500 mt-1">${t.arrTime}</p></div></div></div>`);
+    };
+    window.openAddTransportModal = function(){ editingTransportIndex=null; document.getElementById('transport-code').value=""; document.getElementById('transport-from').value=""; document.getElementById('transport-to').value=""; document.getElementById('transport-dep-time').value=""; document.getElementById('transport-arr-time').value=""; window.openModal('modal-add-transport'); };
+    window.openEditTransportModal = function(i){ editingTransportIndex=i; const t=tripData.transport[i]; document.getElementById('transport-type').value=t.type; document.getElementById('transport-code').value=t.code; document.getElementById('transport-from').value=t.from; document.getElementById('transport-to').value=t.to; document.getElementById('transport-dep-time').value=t.depTime; document.getElementById('transport-arr-time').value=t.arrTime; document.getElementById('transport-link').value=t.link||''; window.openModal('modal-add-transport'); };
+    window.saveTransportItem = function(){ const p={type:document.getElementById('transport-type').value, code:document.getElementById('transport-code').value, from:document.getElementById('transport-from').value, to:document.getElementById('transport-to').value, depTime:document.getElementById('transport-dep-time').value, arrTime:document.getElementById('transport-arr-time').value, link:document.getElementById('transport-link').value}; if(!p.code||!p.from||!p.to) return window.showCustomAlert("填寫不完整"); if(editingTransportIndex!==null) tripData.transport[editingTransportIndex]=p; else tripData.transport.push(p); window.saveToDatabase(); window.renderTransport(); window.closeModal('modal-add-transport'); };
+    window.deleteTransportItem = function(i){ window.showCustomConfirm("刪除？", ()=>{tripData.transport.splice(i,1); window.saveToDatabase(); window.renderTransport();}); };
+
+    window.renderStay = function() {
+      const c = document.getElementById('stay-list'); c.innerHTML='';
+      if(tripData.accommodations.length===0){
+        c.innerHTML = `<div class="col-span-1 md:col-span-2 text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200"><span class="text-3xl block mb-2">🏨</span><p class="text-slate-400 text-xs font-medium">還沒有住宿資訊紀錄</p></div>`; return;
+      }
+      tripData.accommodations.forEach((s,i)=> {
+        let nText = "";
+        if(s.checkIn && s.checkOut){ const d1=new Date(s.checkIn), d2=new Date(s.checkOut); const days = Math.ceil((d2-d1)/86400000); if(days>0) nText = `${days} 晚`; }
+        c.innerHTML+=`<div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden relative transition hover:shadow-md"><div class="bg-indigo-600 text-white px-4 py-2.5 flex justify-between items-center text-xs font-bold"><span class="truncate pr-2 max-w-[160px]">🏨 ${s.name}</span><div class="flex items-center space-x-2 shrink-0">${nText ? `<span class="bg-white/20 px-2 py-0.5 rounded-full text-[10px] font-sans">${nText}</span>` : ''}<button onclick="openEditStayModal(${i})" class="text-indigo-200 hover:text-white p-1"><i class="fa-solid fa-pen text-[10px]"></i></button><button onclick="deleteStayItem(${i})" class="text-indigo-200 hover:text-red-300 p-1"><i class="fa-solid fa-trash text-[10px]"></i></button></div></div><div class="p-4 flex flex-col space-y-3 relative bg-slate-50/50"><div class="absolute w-4 h-4 bg-slate-50 border-r border-slate-200 rounded-full -left-2 top-0 -translate-y-1/2"></div><div class="absolute w-4 h-4 bg-slate-50 border-l border-slate-200 rounded-full -right-2 top-0 -translate-y-1/2"></div><div class="grid grid-cols-2 gap-4 pb-2 border-b border-dashed border-slate-200 text-xs"><div><span class="text-slate-400 font-bold text-[9px] uppercase">入住 CHECK-IN</span><p class="font-extrabold mt-0.5 font-sans">${s.checkIn||'-'}</p></div><div><span class="text-slate-400 font-bold text-[9px] uppercase">退房 CHECK-OUT</span><p class="font-extrabold mt-0.5 font-sans">${s.checkOut||'-'}</p></div></div><div class="text-[11px] space-y-1">${s.code ? `<p><span class="text-slate-400 font-semibold">確認碼:</span> <span class="font-bold font-sans">${s.code}</span></p>` : ''}${s.address ? `<div class="mt-2 bg-white p-2 rounded-xl border border-slate-100 flex justify-between items-center"><div class="truncate mr-2"><span class="text-slate-400 font-semibold block text-[10px]">地址 / 地圖連結</span><span class="font-medium text-slate-700 truncate block">${s.address}</span></div><button onclick="openLinkViewer('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address)}', '${s.name}')" class="text-blue-500 hover:text-blue-700 p-1.5 bg-blue-50 rounded-lg transition active:scale-90"><i class="fa-solid fa-map-location-dot"></i></button></div>` : ''}</div></div></div>`;
+      });
+    };
+    window.openAddStayModal = function(){ editingStayIndex=null; document.getElementById('stay-name').value=""; document.getElementById('stay-checkin').value=""; document.getElementById('stay-checkout').value=""; window.openModal('modal-add-stay'); };
+    window.openEditStayModal = function(i){ editingStayIndex=i; const s=tripData.accommodations[i]; document.getElementById('stay-name').value=s.name; document.getElementById('stay-checkin').value=s.checkIn; document.getElementById('stay-checkout').value=s.checkOut; document.getElementById('stay-address').value=s.address; document.getElementById('stay-code').value=s.code; document.getElementById('stay-phone').value=s.phone; document.getElementById('stay-notes').value=s.notes; document.getElementById('stay-link').value=s.link; window.openModal('modal-add-stay'); };
+    window.saveStayItem = function(){ const p={name:document.getElementById('stay-name').value, checkIn:document.getElementById('stay-checkin').value, checkOut:document.getElementById('stay-checkout').value, address:document.getElementById('stay-address').value, code:document.getElementById('stay-code').value, phone:document.getElementById('stay-phone').value, notes:document.getElementById('stay-notes').value, link:document.getElementById('stay-link').value}; if(!p.name) return; if(editingStayIndex!==null) tripData.accommodations[editingStayIndex]=p; else tripData.accommodations.push(p); window.saveToDatabase(); window.renderStay(); window.closeModal('modal-add-stay'); };
+    window.deleteStayItem = function(i){ window.showCustomConfirm("刪除？", ()=>{tripData.accommodations.splice(i,1); window.saveToDatabase(); window.renderStay();}); };
+
+    window.selectSpotType = function(t){ selectedSpotType=t; document.getElementById('btn-spot-type-attraction').className=t==='景點'?"flex-1 py-2 rounded text-xs font-bold bg-blue-50 text-blue-600":"flex-1 py-2 rounded text-xs font-bold bg-slate-50 text-slate-500"; document.getElementById('btn-spot-type-food').className=t==='美食'?"flex-1 py-2 rounded text-xs font-bold bg-blue-50 text-blue-600":"flex-1 py-2 rounded text-xs font-bold bg-slate-50 text-slate-500"; };
+    window.openAddSpotModal = function(){ editingSpotId=null; document.getElementById('spot-name').value=""; document.getElementById('spot-map').value=""; window.selectSpotType('景點'); window.openModal('modal-add-spot'); };
+    window.openEditSpotModal = function(id){ editingSpotId=id; const s=tripData.spots.find(x=>x.id===id); document.getElementById('spot-name').value=s.name; document.getElementById('spot-map').value=(s.lat&&s.lng)?`${s.lat},${s.lng}`:s.mapUrl; window.selectSpotType(s.type); window.openModal('modal-add-spot'); };
+    window.saveSpotItem = function(){
+      const n=document.getElementById('spot-name').value, m=document.getElementById('spot-map').value; if(!n) return window.showCustomAlert("請輸入名稱！");
+      let lat=null, lng=null, u=m; const rx=/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/; const mt=m.match(rx);
+      if(mt){ lat=parseFloat(mt[1]); lng=parseFloat(mt[2]); u=`https://maps.google.com/?q=${lat},${lng}`; }
+      const p = {name:n, type:selectedSpotType, mapUrl:u, lat, lng, visited:false};
+      if(editingSpotId!==null){ const idx=tripData.spots.findIndex(x=>x.id===editingSpotId); p.id=editingSpotId; p.visited=tripData.spots[idx].visited; tripData.spots[idx]=p; } else { p.id=Date.now(); tripData.spots.push(p); }
+      window.saveToDatabase(); window.renderSpots(); if(spotsViewMode==='map') drawMapMarkers(); window.closeModal('modal-add-spot');
+    };
+    window.deleteSpotItem = function(i){ window.showCustomConfirm("刪除？", ()=>{tripData.spots.splice(i,1); window.saveToDatabase(); window.renderSpots(); if(spotsViewMode==='map') drawMapMarkers();}); };
+    window.toggleSpotVisited = function(i){ tripData.spots[i].visited=!tripData.spots[i].visited; window.saveToDatabase(); window.renderSpots(); };
+
+    window.toggleFxInputs = function() {
+      const e=document.getElementById('expense-use-fx').checked;
+      if(e){ document.getElementById('fx-normal-box').classList.add('hidden'); document.getElementById('fx-active-box').classList.remove('hidden'); document.getElementById('expense-amount').readOnly=true; window.calculateFxToBase(); }
+      else{ document.getElementById('fx-normal-box').classList.remove('hidden'); document.getElementById('fx-active-box').classList.add('hidden'); document.getElementById('expense-amount').readOnly=false; }
+    };
+    window.calculateFxToBase = function(){ if(document.getElementById('expense-use-fx').checked) document.getElementById('expense-amount').value = Math.round((parseFloat(document.getElementById('expense-fx-amount').value)||0)*(parseFloat(document.getElementById('expense-fx-rate').value)||0)); };
+    window.quickCalculateRate = function(){ document.getElementById('calc-base-equivalent').textContent = Math.round((parseFloat(document.getElementById('calc-foreign-amt').value)||0)*(parseFloat(document.getElementById('calc-foreign-rate').value)||0))+" "+(tripData.baseCurrency||"TWD"); };
+    window.fillCalculatorToExpense = function(){ window.openAddExpenseModal(); document.getElementById('expense-use-fx').checked=true; window.toggleFxInputs(); document.getElementById('expense-fx-currency').value=document.getElementById('calc-foreign-curr').value; document.getElementById('expense-fx-amount').value=document.getElementById('calc-foreign-amt').value; document.getElementById('expense-fx-rate').value=document.getElementById('calc-foreign-rate').value; window.calculateFxToBase(); window.showToast("已帶入記帳"); };
+    window.openAddExpenseModal = function(){ editingExpenseId=null; document.getElementById('expense-title').value=""; document.getElementById('expense-amount').value=""; document.getElementById('expense-use-fx').checked=false; window.toggleFxInputs(); renderExpenseMembers(); window.openModal('modal-add-expense'); };
+    window.openEditExpenseModal = function(id){ editingExpenseId=id; const e=tripData.expenses.find(x=>x.id===id); document.getElementById('expense-category').value=e.category; document.getElementById('expense-title').value=e.title; document.getElementById('expense-amount').value=e.amount; document.getElementById('expense-use-fx').checked=e.useFx||false; document.getElementById('expense-fx-currency').value=e.fxCurrency||""; document.getElementById('expense-fx-amount').value=e.fxAmount||""; document.getElementById('expense-fx-rate').value=e.fxRate||""; window.toggleFxInputs(); renderExpenseMembers(e.paidBy, e.splitWith); window.openModal('modal-add-expense'); };
+    function renderExpenseMembers(p="", s=[]) {
+      const ps=document.getElementById('expense-paid-by'); ps.innerHTML=''; const bx=document.getElementById('expense-split-members-box'); bx.innerHTML='';
+      tripData.members.forEach(m=>{ ps.innerHTML+=`<option value="${m}" ${m===p?'selected':''}>${m}</option>`; const ck=(s.length===0||s.includes(m))?'checked':''; bx.innerHTML+=`<label class="flex items-center space-x-1"><input type="checkbox" value="${m}" ${ck} class="expense-splitter-checkbox text-blue-600"><span class="text-xs">${m}</span></label>`; });
+    }
+    window.saveExpenseItem = function(){
+      const amt=parseInt(document.getElementById('expense-amount').value); if(!document.getElementById('expense-title').value||isNaN(amt)) return window.showCustomAlert("填寫錯誤");
+      let sp=[]; document.querySelectorAll('.expense-splitter-checkbox').forEach(c=>{if(c.checked)sp.push(c.value)}); if(sp.length===0) return window.showCustomAlert("需分攤者");
+      const p = {id:editingExpenseId||Date.now(), category:document.getElementById('expense-category').value, title:document.getElementById('expense-title').value, amount:amt, useFx:document.getElementById('expense-use-fx').checked, fxCurrency:document.getElementById('expense-fx-currency').value, fxAmount:parseFloat(document.getElementById('expense-fx-amount').value)||0, fxRate:parseFloat(document.getElementById('expense-fx-rate').value)||0, paidBy:document.getElementById('expense-paid-by').value, splitWith:sp};
+      if(editingExpenseId) tripData.expenses[tripData.expenses.findIndex(x=>x.id===editingExpenseId)]=p; else tripData.expenses.push(p);
+      window.saveToDatabase(); window.renderExpenses(); window.closeModal('modal-add-expense');
+    };
+    window.deleteExpenseItem = function(i){ window.showCustomConfirm("刪除？", ()=>{tripData.expenses.splice(i,1); window.saveToDatabase(); window.renderExpenses();}); };
+
+    window.renderExpenses = function(){
+      const t=tripData.expenses.reduce((s,i)=>s+i.amount,0); document.getElementById('expense-total-spent').textContent=`$${t}`; document.getElementById('expense-total-budget').textContent=`$${tripData.budget}`;
+      document.getElementById('budget-ratio-text').textContent=`${Math.min(Math.round((t/tripData.budget)*100),100)}%`; document.getElementById('budget-progress-bar').style.width=`${Math.min(Math.round((t/tripData.budget)*100),100)}%`;
+      
+      let bal={}; tripData.members.forEach(m=>bal[m]=0);
+      tripData.expenses.forEach(e=>{ if(!e.splitWith||e.splitWith.length===0)return; let sh=e.amount/e.splitWith.length; bal[e.paidBy||tripData.members[0]]+=e.amount; e.splitWith.forEach(s=>bal[s]-=sh); });
+      let cr=[], dr=[]; Object.keys(bal).forEach(m=>{ let b=parseFloat(bal[m].toFixed(2)); if(b>0.05)cr.push({n:m,a:b}); else if(b<-0.05)dr.push({n:m,a:-b}); });
+      let st=[], i=0, j=0; while(i<dr.length&&j<cr.length){ let m=Math.min(dr[i].a, cr[j].a); st.push({from:dr[i].n, to:cr[j].n, amt:m}); dr[i].a-=m; cr[j].a-=m; if(dr[i].a<=0.05)i++; if(cr[j].a<=0.05)j++; }
+      const sBox=document.getElementById('debt-settle-list'); sBox.innerHTML='';
+      if(st.length===0) sBox.innerHTML=`<p class="text-emerald-600"><i class="fa-solid fa-check"></i> 結清無欠款</p>`;
+      else st.forEach(s=> sBox.innerHTML+=`<div class="flex justify-between items-center bg-white p-2 rounded border"><span class="font-bold">${s.from} ➔ ${s.to}</span><span class="text-rose-500 font-bold">$${s.amt.toFixed(1)}</span></div>`);
+
+      const el=document.getElementById('expense-items-list'); el.innerHTML='';
+      [...tripData.expenses].reverse().forEach(e=>{ const ri=tripData.expenses.indexOf(e); el.innerHTML+=`<div class="p-3 border-b flex justify-between items-center"><div class="overflow-hidden"><p class="font-bold text-sm truncate">${e.title}</p><p class="text-[10px] text-slate-400">${e.paidBy} 付款 • 分攤: ${e.splitWith.length}人</p></div><div class="flex items-center space-x-2"><span class="font-bold">$${e.amount}</span><button onclick="openEditExpenseModal(${e.id})" class="text-blue-400 p-1"><i class="fa-solid fa-pen"></i></button><button onclick="deleteExpenseItem(${ri})" class="text-red-400 p-1"><i class="fa-solid fa-trash"></i></button></div></div>`; });
+      
+      const tagBox=document.getElementById('member-tags-list'); tagBox.innerHTML='';
+      tripData.members.forEach((m,idx)=> tagBox.innerHTML+=`<span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-full text-[10px] font-bold">${m} ${m!=='我'?`<button onclick="deleteTripMember(${idx})" class="ml-1 text-red-500">x</button>`:''}</span>`);
+    };
+    window.toggleMemberManager = function(){ document.getElementById('member-manager-box').classList.toggle('hidden'); };
+    window.addTripMember = function(){ const n=document.getElementById('input-new-member').value.trim(); if(n&&!tripData.members.includes(n)){ tripData.members.push(n); window.saveToDatabase(); window.renderExpenses(); document.getElementById('input-new-member').value=''; } };
+    window.deleteTripMember = function(i){ window.showCustomConfirm("移除成員？", ()=>{tripData.members.splice(i,1); window.saveToDatabase(); window.renderExpenses();}); };
+
+    window.exportBackupData = function(){ const a=document.createElement('a'); a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(tripData,null,2)); a.download="TripBackup.json"; a.click(); window.closeModal('modal-backup'); };
+    window.importBackupData = function(ev){ const r=new FileReader(); r.onload=e=>{try{const d=JSON.parse(e.target.result); if(d.title){ tripData=d; window.saveToDatabase(); window.switchTab('dashboard'); window.closeModal('modal-backup'); window.showToast("還原成功"); }}catch(err){window.showCustomAlert("檔案損毀");}}; if(ev.target.files[0]) r.readAsText(ev.target.files[0]); };
+
+    window.saveToDatabase = function(notify=false, skipCloudSync=false){
+      if(!indexdb) { localStorage.setItem("tripFallback", JSON.stringify(tripData)); return; }
+      indexdb.transaction([STORE_NAME], "readwrite").objectStore(STORE_NAME).put({id:"current_trip", data:JSON.parse(JSON.stringify(tripData))}).onsuccess = ()=>{ if(notify) window.showToast("已儲存"); };
+      if(isCollabActive && !skipCloudSync) syncToCloud();
+    };
+
+    function initDatabase() {
+      return new Promise((res, rej) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onerror = e => rej(e.target.errorCode);
+        req.onupgradeneeded = e => { if(!e.target.result.objectStoreNames.contains(STORE_NAME)) e.target.result.createObjectStore(STORE_NAME, {keyPath:"id"}); };
+        req.onsuccess = e => { indexdb = e.target.result; res(indexdb); };
+      });
+    }
+    function loadFromDatabase() {
+      return new Promise(res => {
+        if(!indexdb) { const b=localStorage.getItem("tripFallback"); if(b) tripData=JSON.parse(b); res(); return; }
+        indexdb.transaction([STORE_NAME], "readonly").objectStore(STORE_NAME).get("current_trip").onsuccess = e => {
+          if(e.target.result&&e.target.result.data) { const d=e.target.result.data; tripData=d; if(!tripData.accommodations)tripData.accommodations=[]; } res();
+        };
+      });
+    }
+
+    async function initApp() {
+      try { await initDatabase(); await loadFromDatabase(); } catch(e) {}
+      finally {
+        if(auth) ensureFirebaseAuth().catch(e=>console.log("No config"));
+        window.switchTab('dashboard'); window.quickCalculateRate(); window.fetchRealWeather();
+      }
+    }
+    initApp();
+  </script>
+</body>
+</html>
